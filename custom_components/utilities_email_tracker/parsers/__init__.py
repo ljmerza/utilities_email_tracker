@@ -5,11 +5,13 @@ import logging
 from typing import Any
 
 from .duke_energy import parse_duke_energy
+from .psnc_energy import parse_psnc_energy
 
 _LOGGER = logging.getLogger(__name__)
 
 PARSERS = [
-    ("duke_energy", parse_duke_energy)
+    ("duke_energy", parse_duke_energy),
+    ("psnc_energy", parse_psnc_energy),
 ]
 
 
