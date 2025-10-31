@@ -1,0 +1,16 @@
+{
+    "domain": "utilities_email_tracker",
+    "name": "Utilities Email Tracker",
+    "documentation": "https://github.com/cubxi/utilities-email-tracker",
+    "dependencies": [],
+    "codeowners": [
+        "@cubxi"
+    ],
+    "requirements": [
+        "imapclient==2.3.1",
+        "mail-parser==3.9.3"
+    ],
+    "config_flow": true,
+    "iot_class": "cloud_polling",
+    "version": "0.1.0"
+}

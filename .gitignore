@@ -1,0 +1,26 @@
+# Logs
+**/email.log
+
+# Python caches
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE / tooling
+.vscode/
+.idea/
+
+# Misc
+.DS_Store

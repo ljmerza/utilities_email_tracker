@@ -1,0 +1,46 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Setup Utilities Email Tracker",
+        "description": "Connect your email account to monitor utility bills",
+        "data": {
+          "email": "Email Address",
+          "password": "Password (app password recommended)",
+          "imap_server": "IMAP Server",
+          "imap_port": "IMAP Port",
+          "use_ssl": "Use SSL"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to email server. Check the server details and try again.",
+      "invalid_auth": "Authentication failed. Confirm your email and password.",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This email account is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Utilities Email Tracker Options",
+        "description": "Configure how the integration scans for utility emails",
+        "data": {
+          "days_old": "Days to scan (how far back to check emails)",
+          "folder": "Email folder to monitor",
+          "scan_interval": "Scan interval (minutes)",
+          "max_messages": "Maximum messages to keep"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "utility_bills": {
+        "name": "Utility bill summary"
+      }
+    }
+  }
+}
