@@ -20,8 +20,14 @@ from ..const import (
 )
 
 ACCOUNT_RE = re.compile(r"Account:\s*([0-9\-]+)", re.IGNORECASE)
-AMOUNT_DUE_RE = re.compile(r"Amount\s+Due:\s*\$?([0-9,]+(?:\.[0-9]{2})?)", re.IGNORECASE)
-DUE_DATE_RE = re.compile(r"Due\s+Date:\s*([A-Za-z0-9.,\-/ ]+)", re.IGNORECASE)
+AMOUNT_DUE_RE = re.compile(
+    r"Amount\s+Due:\s*[*\s]*\$?([0-9,]+(?:\.[0-9]{2})?)",
+    re.IGNORECASE,
+)
+DUE_DATE_RE = re.compile(
+    r"Due\s+Date:\s*[*\s]*([A-Za-z0-9.,\-/ ]+)",
+    re.IGNORECASE,
+)
 CUSTOMER_RE = re.compile(r"Customer\s+Name:\s*([A-Za-z ,.'-]+)", re.IGNORECASE)
 SERVICE_ADDRESS_RE = re.compile(
     r"Service\s+Address:\s*([A-Za-z0-9.,#' \-]+)",
@@ -40,8 +46,9 @@ def parse_raleigh_water(email: dict[str, Any]) -> dict[str, Any] | None:
 
     normalized = _normalize(body)
     combined = f"{subject} {normalized}".lower()
+    trigger_phrase = "city of raleigh - your utility bill is available"
 
-    if "raleigh" not in combined or "utility bill" not in combined:
+    if trigger_phrase not in combined:
         return None
 
     account_number = _search_group(ACCOUNT_RE, normalized)
