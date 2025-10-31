@@ -6,12 +6,14 @@ from typing import Any
 
 from .duke_energy import parse_duke_energy
 from .psnc_energy import parse_psnc_energy
+from .raleigh_water import parse_raleigh_water
 
 _LOGGER = logging.getLogger(__name__)
 
 PARSERS = [
     ("duke_energy", parse_duke_energy),
     ("psnc_energy", parse_psnc_energy),
+    ("raleigh_water", parse_raleigh_water),
 ]
 
 

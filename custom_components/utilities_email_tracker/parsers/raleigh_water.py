@@ -1,4 +1,4 @@
-"""Parser for Duke Energy billing emails."""
+"""Parser for City of Raleigh water billing emails."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -19,49 +19,47 @@ from ..const import (
     EMAIL_ATTR_SUBJECT,
 )
 
-ACCOUNT_RE = re.compile(r"Account\s+Number:\s*([0-9\-]+)", re.IGNORECASE)
-BILLING_DATE_RE = re.compile(r"Billing\s+Date:\s*([A-Za-z0-9.,\-/ ]+)", re.IGNORECASE)
-DUE_DATE_RE = re.compile(r"Due\s+Date:\s*([A-Za-z0-9.,\-/ ]+)", re.IGNORECASE)
+ACCOUNT_RE = re.compile(r"Account:\s*([0-9\-]+)", re.IGNORECASE)
 AMOUNT_DUE_RE = re.compile(r"Amount\s+Due:\s*\$?([0-9,]+(?:\.[0-9]{2})?)", re.IGNORECASE)
-MONTH_NAME_PATTERN = (
-    r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|"
-    r"May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|"
-    r"Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+DUE_DATE_RE = re.compile(r"Due\s+Date:\s*([A-Za-z0-9.,\-/ ]+)", re.IGNORECASE)
+CUSTOMER_RE = re.compile(r"Customer\s+Name:\s*([A-Za-z ,.'-]+)", re.IGNORECASE)
+SERVICE_ADDRESS_RE = re.compile(
+    r"Service\s+Address:\s*([A-Za-z0-9.,#' \-]+)",
+    re.IGNORECASE,
 )
-DATE_FINDER_RE = re.compile(
-    rf"({MONTH_NAME_PATTERN}\.?\s+\d{{1,2}},?\s+\d{{4}}|\d{{1,2}}[/-]\d{{1,2}}[/-]\d{{2,4}})",
+FORWARDED_SENDER_RE = re.compile(
+    r"From:\s*(?:<)?([^\s>]+@raleighnc\.gov)(?:>)?",
     re.IGNORECASE,
 )
 
 
-def parse_duke_energy(email: dict[str, Any]) -> dict[str, Any] | None:
-    """Extract Duke Energy billing details from an email."""
+def parse_raleigh_water(email: dict[str, Any]) -> dict[str, Any] | None:
+    """Extract Raleigh Water billing details from a forwarded email."""
     subject = (email.get(EMAIL_ATTR_SUBJECT) or "").strip()
     body = email.get(EMAIL_ATTR_BODY) or ""
 
     normalized = _normalize(body)
     combined = f"{subject} {normalized}".lower()
 
-    if "duke energy" not in combined:
+    if "raleigh" not in combined or "utility bill" not in combined:
         return None
 
     account_number = _search_group(ACCOUNT_RE, normalized)
     amount_display, amount_value = _parse_amount(_search_group(AMOUNT_DUE_RE, normalized))
-    billing_display = _extract_first_date(_search_group(BILLING_DATE_RE, normalized))
-    billing_iso = _parse_date_iso(billing_display)
     due_display = _extract_first_date(_search_group(DUE_DATE_RE, normalized))
     due_iso = _parse_date_iso(due_display)
+    customer_name = _search_group(CUSTOMER_RE, normalized)
+    service_address = _search_group(SERVICE_ADDRESS_RE, normalized)
 
-    if not any((account_number, amount_display, due_display, billing_display)):
+    if not any((account_number, amount_display, due_display)):
         return None
 
     status = _derive_status(due_iso)
+    forwarded_address = _extract_forwarded_sender(normalized)
 
-    snippet_source = normalized[:DEFAULT_SNIPPET_LENGTH]
-
-    bill = {
+    bill: dict[str, Any] = {
         "id": email.get("message_id") or email.get("uid"),
-        "provider": "Duke Energy",
+        "provider": "City of Raleigh Water",
         "subject": subject,
         "received": email.get(EMAIL_ATTR_DATE),
         "amount_due": amount_display,
@@ -69,22 +67,33 @@ def parse_duke_energy(email: dict[str, Any]) -> dict[str, Any] | None:
         "due_date": due_display,
         "due_date_iso": due_iso,
         "status": status,
-        "snippet": snippet_source,
-        "from_address": email.get(EMAIL_ATTR_ADDRESS),
+        "snippet": normalized[:DEFAULT_SNIPPET_LENGTH],
         ATTR_ACCOUNT_NUMBER: account_number,
-        ATTR_BILLING_DATE: billing_display,
-        ATTR_BILLING_DATE_ISO: billing_iso,
+        ATTR_BILLING_DATE: None,
+        ATTR_BILLING_DATE_ISO: None,
     }
 
+    if customer_name:
+        bill["customer_name"] = customer_name
+    if service_address:
+        bill["service_address"] = service_address
+
+    from_address = forwarded_address or email.get(EMAIL_ATTR_ADDRESS)
     from_display = email.get(EMAIL_ATTR_FROM)
+
+    if forwarded_address:
+        from_display = "Raleigh Water"
+
     if from_display:
         bill[EMAIL_ATTR_FROM] = from_display
+    if from_address:
+        bill[EMAIL_ATTR_ADDRESS] = from_address
 
     return bill
 
 
 def _normalize(value: str) -> str:
-    """Clean the HTML body down to a searchable text block."""
+    """Clean the HTML body into a searchable text block."""
     if not value:
         return ""
 
@@ -169,12 +178,17 @@ def _extract_first_date(value: str | None) -> str | None:
     if not value:
         return None
 
-    match = DATE_FINDER_RE.search(value)
-    if match:
-        return match.group(1).strip()
-
-    cleaned = value.strip()
-    return cleaned or None
+    date_match = re.search(
+        r"(?:\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|"
+        r"May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|"
+        r"Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4})"
+        r"|(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
+        value,
+        re.IGNORECASE,
+    )
+    if date_match:
+        return date_match.group(0).strip()
+    return value.strip() or None
 
 
 def _derive_status(due_iso: str | None) -> str:
@@ -190,3 +204,10 @@ def _derive_status(due_iso: str | None) -> str:
     if due_date < today:
         return "overdue"
     return "due"
+
+
+def _extract_forwarded_sender(text: str) -> str | None:
+    match = FORWARDED_SENDER_RE.search(text)
+    if match:
+        return match.group(1).strip()
+    return None
