@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Publish Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract versions
+        id: versions
+        run: |
+          ref_name="${GITHUB_REF_NAME}"
+          tag="${ref_name}"
+          version="${ref_name#v}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate manifest version matches tag
+        run: |
+          manifest_version=$(jq -r '.version' custom_components/utilities_email_tracker/manifest.json)
+          echo "Manifest version: ${manifest_version}"
+          if [ "${manifest_version}" != "${{ steps.versions.outputs.version }}" ]; then
+            echo "Tag version (${{ steps.versions.outputs.version }}) does not match manifest version (${manifest_version})" >&2
+            exit 1
+          fi
+
+      - name: Build distribution zip
+        run: |
+          mkdir -p dist
+          python - <<'PY'
+import zipfile
+from pathlib import Path
+
+repo_root = Path(".")
+include_root = repo_root / "custom_components" / "utilities_email_tracker"
+archive_path = repo_root / "dist" / "utilities_email_tracker.zip"
+
+with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
+    for path in include_root.rglob("*"):
+        if "__pycache__" in path.parts:
+            continue
+        if path.suffix in {".pyc", ".pyo"}:
+            continue
+        if path.name.endswith(".log"):
+            continue
+        if path.is_file():
+            archive.write(path, path.relative_to(repo_root))
+PY
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: utilities_email_tracker
+          path: dist/utilities_email_tracker.zip
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.versions.outputs.tag }}
+          name: Utilities Email Tracker ${{ steps.versions.outputs.version }}
+          files: dist/utilities_email_tracker.zip
+          generate_release_notes: true
