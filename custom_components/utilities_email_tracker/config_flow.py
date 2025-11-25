@@ -90,6 +90,7 @@ class UtilitiesEmailTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input.setdefault(CONF_IMAP_PORT, DEFAULT_IMAP_PORT)
                 user_input.setdefault(CONF_USE_SSL, DEFAULT_USE_SSL)
                 user_input.setdefault(CONF_EMAIL_FOLDER, DEFAULT_FOLDER)
+                user_input.setdefault(CONF_DAYS_OLD, DEFAULT_DAYS_OLD)
 
                 info = await validate_imap_connection(self.hass, user_input)
             except CannotConnect:
@@ -115,6 +116,9 @@ class UtilitiesEmailTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     CONF_USE_SSL, default=DEFAULT_USE_SSL
                 ): cv.boolean,
+                vol.Optional(
+                    CONF_DAYS_OLD, default=DEFAULT_DAYS_OLD
+                ): vol.All(cv.positive_int, vol.Range(min=1, max=90)),
             }
         )
 
@@ -145,11 +149,15 @@ class UtilitiesEmailTrackerOptionsFlowHandler(config_entries.OptionsFlow):
 
         options = self.config_entry.options
 
+        days_old_default = options.get(
+            CONF_DAYS_OLD,
+            self.config_entry.data.get(CONF_DAYS_OLD, DEFAULT_DAYS_OLD),
+        )
+
         data_schema = vol.Schema(
             {
                 vol.Optional(
-                    CONF_DAYS_OLD,
-                    default=options.get(CONF_DAYS_OLD, DEFAULT_DAYS_OLD),
+                    CONF_DAYS_OLD, default=days_old_default
                 ): vol.All(cv.positive_int, vol.Range(min=1, max=90)),
                 vol.Optional(
                     CONF_EMAIL_FOLDER,

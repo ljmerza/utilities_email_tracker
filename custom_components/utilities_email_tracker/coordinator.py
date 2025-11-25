@@ -98,7 +98,9 @@ class UtilitiesEmailTrackerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         username = self.config[CONF_EMAIL]
         password = self.config[CONF_PASSWORD]
         folder = self.options.get(CONF_EMAIL_FOLDER, DEFAULT_FOLDER)
-        days_old = self.options.get(CONF_DAYS_OLD, DEFAULT_DAYS_OLD)
+        days_old = self.options.get(
+            CONF_DAYS_OLD, self.config.get(CONF_DAYS_OLD, DEFAULT_DAYS_OLD)
+        )
 
         search_date = date.today() - timedelta(days=days_old)
         search_flag = ["SINCE", search_date]
