@@ -1,10 +1,11 @@
 {
     "domain": "utilities_email_tracker",
     "name": "Utilities Email Tracker",
-    "documentation": "https://github.com/cubxi/utilities-email-tracker",
+    "documentation": "https://github.com/ljmerza/utilities_email_tracker",
+    "issue_tracker": "https://github.com/ljmerza/utilities_email_tracker/issues",
     "dependencies": [],
     "codeowners": [
-        "@cubxi"
+        "@ljmerza"
     ],
     "requirements": [
         "imapclient==3.1.0",
@@ -12,5 +13,5 @@
     ],
     "config_flow": true,
     "iot_class": "cloud_polling",
-    "version": "1.1.0"
+    "version": "1.1.1"
 }
