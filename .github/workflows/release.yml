@@ -38,25 +38,14 @@ jobs:
       - name: Build distribution zip
         run: |
           mkdir -p dist
-          python - <<'PY'
-import zipfile
-from pathlib import Path
-
-repo_root = Path(".")
-include_root = repo_root / "custom_components" / "utilities_email_tracker"
-archive_path = repo_root / "dist" / "utilities_email_tracker.zip"
-
-with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
-    for path in include_root.rglob("*"):
-        if "__pycache__" in path.parts:
-            continue
-        if path.suffix in {".pyc", ".pyo"}:
-            continue
-        if path.name.endswith(".log"):
-            continue
-        if path.is_file():
-            archive.write(path, path.relative_to(repo_root))
-PY
+          cd custom_components
+          zip -r ../dist/utilities_email_tracker.zip utilities_email_tracker \
+            -x "utilities_email_tracker/__pycache__/*" \
+            -x "utilities_email_tracker/**/__pycache__/*" \
+            -x "utilities_email_tracker/*.pyc" \
+            -x "utilities_email_tracker/**/*.pyc" \
+            -x "utilities_email_tracker/email.log" \
+            -x "utilities_email_tracker/**/*.log"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
